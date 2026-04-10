@@ -162,6 +162,45 @@
             line-height: 1.6;
         }
 
+        #chart-container {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            text-align: center;
+        }
+
+        #growth-chart {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+
+        .chart-legend {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
         .input-inline {
             display: flex;
             gap: 10px;
@@ -919,7 +958,7 @@
             var strHead=strGenderToHTML+","+ageMandarin+"<br>";
             var strMandarin=percentile[0]+"<br>";
             strMandarin+=bbw[0]+"<br>";
-            var strSeparate="<br>"+"================================="+"<br><br>";
+            var strSeparate="<hr style='margin: 15px 0; border: none; border-top: 2px solid #e5e7eb;'>";
             var strEnglish = percentile[1].replace(",", "<br>") + "<br>";
             if (bbw[1] !== "") {
                 strEnglish += bbw[1] + "<br>";
@@ -1207,6 +1246,232 @@
         return arr;
     }
 
+    function drawGrowthChart(gender, age, height, weight, isMeasuringHeight = true) {
+        const suffix = gender === 'male' ? '_m' : '_f';
+        const canvas = document.getElementById('growth-chart');
+        const ctx = canvas.getContext('2d');
+        
+        // 設定 Canvas 大小 - 響應式設計
+        const containerWidth = document.getElementById('chart-container').offsetWidth - 30;
+        canvas.width = Math.min(containerWidth, 600);
+        canvas.height = 400;
+
+        // 顏色配置
+        const colors = {
+            p3: '#ef4444',
+            p15: '#f97316',
+            p50: '#22c55e',
+            p85: '#3b82f6',
+            p97: '#8b5cf6',
+            childPoint: '#000000',
+            grid: '#e5e7eb',
+            axis: '#1f2937'
+        };
+
+        const percentileLabels = ['3%', '15%', '50%', '85%', '97%'];
+        const percentileColors = [colors.p3, colors.p15, colors.p50, colors.p85, colors.p97];
+
+        // 邏輯與繪製區域
+        const margin = { top: 30, right: 30, bottom: 50, left: 60 };
+        const chartWidth = canvas.width - margin.left - margin.right;
+        const chartHeight = canvas.height - margin.top - margin.bottom;
+
+        // 決定軸範圍（身高測量）
+        let ageMin = 0, ageMax = 18;
+        let valueMin = 40, valueMax = 180;
+
+        if (!isMeasuringHeight) {
+            // 體重測量
+            valueMin = 0.5;
+            valueMax = 100;
+        }
+
+        // 縮放函數
+        function scaleX(ageVal) {
+            return margin.left + ((ageVal - ageMin) / (ageMax - ageMin)) * chartWidth;
+        }
+
+        function scaleY(val) {
+            return margin.top + chartHeight - ((val - valueMin) / (valueMax - valueMin)) * chartHeight;
+        }
+
+        // 繪製背景和網格
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 0.5;
+
+        // 水平網格線
+        for (let i = Math.ceil(valueMin); i <= Math.floor(valueMax); i += 10) {
+            const y = scaleY(i);
+            ctx.beginPath();
+            ctx.moveTo(margin.left, y);
+            ctx.lineTo(margin.left + chartWidth, y);
+            ctx.stroke();
+        }
+
+        // 垂直網格線
+        for (let i = 0; i <= ageMax; i += 2) {
+            const x = scaleX(i);
+            ctx.beginPath();
+            ctx.moveTo(x, margin.top);
+            ctx.lineTo(x, margin.top + chartHeight);
+            ctx.stroke();
+        }
+
+        // 繪製軸
+        ctx.strokeStyle = colors.axis;
+        ctx.lineWidth = 2;
+
+        // X 軸
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top + chartHeight);
+        ctx.lineTo(margin.left + chartWidth, margin.top + chartHeight);
+        ctx.stroke();
+
+        // Y 軸
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, margin.top + chartHeight);
+        ctx.stroke();
+
+        // 軸標籤
+        ctx.fillStyle = colors.axis;
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+
+        // X 軸標籤 (年齡)
+        for (let i = 0; i <= ageMax; i += 2) {
+            const x = scaleX(i);
+            ctx.fillText(i, x, margin.top + chartHeight + 20);
+        }
+
+        ctx.textAlign = 'right';
+        // Y 軸標籤
+        for (let i = Math.ceil(valueMin); i <= Math.floor(valueMax); i += 10) {
+            const y = scaleY(i);
+            ctx.fillText(i, margin.left - 10, y + 4);
+        }
+
+        // 軸標題
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('年齡 (歲)', margin.left + chartWidth / 2, canvas.height - 10);
+
+        ctx.save();
+        ctx.translate(15, margin.top + chartHeight / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(isMeasuringHeight ? '身高 (公分)' : '體重 (公斤)', 0, 0);
+        ctx.restore();
+
+        // 取得百分位數據
+        const arr = cur_get_percentile_arr_gender(suffix);
+        
+        // 繪製百分位曲線 - 直接使用索引繪製，不依賴年齡數組
+        for (let p = 0; p < 5; p++) {
+            const percentileData = isMeasuringHeight ? arr[p][0] : arr[p][1];
+            
+            ctx.strokeStyle = percentileColors[p];
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            let isFirstPoint = true;
+            // 直接遍歷數據點
+            for (let i = 0; i < percentileData.length; i++) {
+                const value = percentileData[i];
+                
+                // 根據數據點的索引計算年齡（估算）
+                // 0-4歲有12個月的數據點，5-18歲每年2個數據點
+                let ageDecimal;
+                if (i < 60) {
+                    // 0-4歲：61個月（0-60個月）
+                    ageDecimal = i / 12;
+                } else {
+                    // 5-18歲
+                    const remainingIdx = i - 60;
+                    const completeYears = Math.floor(remainingIdx / 2) + 5;
+                    const isSecondHalf = remainingIdx % 2 === 1;
+                    ageDecimal = completeYears + (isSecondHalf ? 0.5 : 0);
+                }
+
+                const x = scaleX(ageDecimal);
+                const y = scaleY(value);
+
+                if (isFirstPoint) {
+                    ctx.moveTo(x, y);
+                    isFirstPoint = false;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // 繪製小孩的座標點
+        if (age >= 0 && age <= ageMax) {
+            const childValue = isMeasuringHeight ? height : weight;
+            if (childValue >= valueMin && childValue <= valueMax) {
+                const childX = scaleX(age);
+                const childY = scaleY(childValue);
+
+                // 繪製座標點
+                ctx.fillStyle = colors.childPoint;
+                ctx.beginPath();
+                ctx.arc(childX, childY, 5, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // 繪製十字標記
+                ctx.strokeStyle = colors.childPoint;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(childX - 8, childY);
+                ctx.lineTo(childX + 8, childY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(childX, childY - 8);
+                ctx.lineTo(childX, childY + 8);
+                ctx.stroke();
+            }
+        }
+
+        // 繪製圖例
+        const legendDiv = document.getElementById('chart-legend');
+        legendDiv.innerHTML = '';
+
+        for (let i = 0; i < percentileLabels.length; i++) {
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = percentileColors[i];
+            colorBox.style.width = '20px';
+            colorBox.style.height = '3px';
+
+            const label = document.createElement('span');
+            label.textContent = '第 ' + percentileLabels[i] + ' 廓線';
+
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(label);
+            legendDiv.appendChild(legendItem);
+        }
+
+        // 添加小孩座標說明
+        const childLegend = document.createElement('div');
+        childLegend.className = 'legend-item';
+        const childDot = document.createElement('div');
+        childDot.style.width = '10px';
+        childDot.style.height = '10px';
+        childDot.style.backgroundColor = colors.childPoint;
+        childDot.style.borderRadius = '50%';
+        const childLabel = document.createElement('span');
+        childLabel.textContent = '小孩目前座標';
+        childLegend.appendChild(childDot);
+        childLegend.appendChild(childLabel);
+        legendDiv.appendChild(childLegend);
+    }
+
     function hideResult() {
         document.getElementById('result-box').style.display = 'none';
         // 清空原廠隱藏結果區
@@ -1279,6 +1544,10 @@
             console.error("執行計算時發生錯誤:", error);
         }
 
+        // 計算年齡 (用於圖表)
+        const dateString = (dateObj.getFullYear()) + "/" + month + "/" + day;
+        const ageDecimal = age_getAge_inDecimal(dateString, 'today');
+
         // 4. 構建自訂摘要 (BMI 與 遺傳身高)
         let customHTML = `<div class="result-summary"><h3 style="margin-top:0; color:#1e40af;">📌 綜合評估摘要</h3>`;
         
@@ -1305,6 +1574,15 @@
         customHTML += `</div>`;
         let finalHTML = customHTML;
 
+        // 插入生長曲線圖表
+        // 建立圖表容器並繪製
+        const chartHTML = `<div id="chart-container">
+            <h3 style="margin-top:0; color:#1e40af;">📊 生長曲線圖</h3>
+            <canvas id="growth-chart"></canvas>
+            <div class="chart-legend" id="chart-legend"></div>
+        </div>`;
+        finalHTML += chartHTML;
+
         // 插入生長百分位結果
         if (officialResult && officialResult.trim() !== '') {
             finalHTML += `<div class="official-result">`;
@@ -1328,6 +1606,11 @@
         
         // 平滑滾動到結果
         resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // 繪製生長曲線圖（需要 DOM 更新完成）
+        setTimeout(function() {
+            drawGrowthChart(gender, ageDecimal, height, weight, true);
+        }, 100);
     });
 </script>
 
