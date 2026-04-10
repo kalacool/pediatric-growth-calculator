@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兒童生長曲線與骨齡預測計算器</title>
+
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .header-image {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            margin: 0 auto 20px auto;
+            display: block;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.75rem;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+            color: #374151;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 600px) {
+            .grid-layout { grid-template-columns: 1fr 1fr; }
+            .col-span-2 { grid-column: span 2; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #4b5563;
+        }
+
+        input[type="number"],
+        input[type="date"],
+        select {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            height: 100%;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .radio-group input {
+            margin-right: 5px;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-submit:hover { background-color: var(--primary-hover); }
+
+        .btn-reset {
+            background-color: #9ca3af;
+            color: white;
+        }
+
+        .btn-reset:hover { background-color: #6b7280; }
+
+        #result-box {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* 針對原廠 JS 產出的結果進行美化 */
+        .official-result {
+            margin-top: 20px; 
+            padding: 15px; 
+            background: #fff; 
+            border-radius: 8px; 
+            border: 1px solid #e5e7eb;
+        }
+        .official-result span {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <img src="./img/IMG_5386.svg" alt="兒童生長計算器圖示" class="header-image">
+    <h1>兒童生長曲線與骨齡預測計算器</h1>
+
+    <form id="growth-form">
+        <div class="section-title">基本資料</div>
+        <div class="grid-layout">
+            <div class="form-group">
+                <label>性別</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="gender" value="male" checked> 男</label>
+                    <label><input type="radio" name="gender" value="female"> 女</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="birthday">小孩生日</label>
+                <input type="date" id="birthday" required>
+            </div>
+            <div class="form-group">
+                <label for="height">身高 (公分)</label>
+                <input type="number" id="height" step="0.1" placeholder="例如：120.5" required>
+            </div>
+            <div class="form-group">
+                <label for="weight">體重 (公斤)</label>
+                <input type="number" id="weight" step="0.1" placeholder="例如：22.0" required>
+            </div>
+        </div>
+
+        <div class="section-title">出生資訊 (選填，計算早產/胎齡使用)</div>
+        <div class="grid-layout">
+            <div class="form-group">
+                <label for="birth-weight">出生體重 (公克)</label>
+                <input type="number" id="birth-weight" placeholder="例如：3200">
+            </div>
+            <div class="form-group">
+                <label for="gestational-age">懷孕週數</label>
+                <input type="number" id="gestational-age" placeholder="例如：39">
+            </div>
+            <div class="form-group col-span-2">
+                <label>胎數</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="twins" value="single" checked> 單胞胎</label>
+                    <label><input type="radio" name="twins" value="twin"> 雙胞胎</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">父母身高 (選填，計算遺傳目標身高)</div>
+        <div class="grid-layout">
+            <div class="form-group">
+                <label for="father-height">父高 (公分)</label>
+                <input type="number" id="father-height" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="mother-height">母高 (公分)</label>
+                <input type="number" id="mother-height" step="0.1">
+            </div>
+        </div>
+
+        <div class="section-title">用骨齡預測身高 (選填進階功能)</div>
+        <div class="grid-layout">
+            <div class="form-group">
+                <label>骨齡檢查結果 (歲 / 月)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="bone-age-years" placeholder="歲" min="0" max="18">
+                    <input type="number" id="bone-age-months" placeholder="月" min="0" max="11">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="exam-height">檢查骨齡當日的身高 (公分)</label>
+                <input type="number" id="exam-height" step="0.1">
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button type="submit" class="btn-submit">計算結果</button>
+            <button type="reset" class="btn-reset" onclick="hideResult()">清空表單</button>
+        </div>
+    </form>
+
+    <div id="result-box"></div>
+
+    <div class="disclaimer">
+        <strong>資料來源說明：</strong><br>
+        1. 本工具0-5歲之資料來源為國民健康署公布之「兒童生長曲線」，5歲以上資料來源為依據陳偉德醫師及張美惠醫師2010年發表之研究成果制定。<br>
+        2. 計算結果僅供參考，如有生長發育之疑義，請逕洽醫師。
+    </div>
+</div>
+
+<div id="legacy-hidden-forms" style="display: none;">
+    <input type="text" id="inp_year_m"><input type="text" id="inp_month_m"><input type="text" id="inp_day_m">
+    <input type="text" id="inp_height_m"><input type="text" id="inp_weight_m">
+    <input type="text" id="inp_bbw_m"><input type="text" id="inp_ga_m">
+    <input type="radio" id="radio_singleton_m" name="pregnancy_type_m" value="singleton">
+    <input type="radio" id="radio_twins_m" name="pregnancy_type_m" value="twins">
+    <input type="text" id="inp_height_father_m"><input type="text" id="inp_height_mother_m">
+    <input type="text" id="inp_boneAge_year_ph_m"><input type="text" id="inp_boneAge_month_ph_m">
+    <input type="text" id="inp_height_ph_m">
+    <div id="result_m"></div><div id="result_ph_m"></div>
+
+    <input type="text" id="inp_year_f"><input type="text" id="inp_month_f"><input type="text" id="inp_day_f">
+    <input type="text" id="inp_height_f"><input type="text" id="inp_weight_f">
+    <input type="text" id="inp_bbw_f"><input type="text" id="inp_ga_f">
+    <input type="radio" id="radio_singleton_f" name="pregnancy_type_f" value="singleton">
+    <input type="radio" id="radio_twins_f" name="pregnancy_type_f" value="twins">
+    <input type="text" id="inp_height_father_f"><input type="text" id="inp_height_mother_f">
+    <input type="text" id="inp_boneAge_year_ph_f"><input type="text" id="inp_boneAge_month_ph_f">
+    <input type="text" id="inp_height_ph_f">
+    <div id="result_f"></div><div id="result_ph_f"></div>
+</div>
+
+<script>
+    function age_getAge_inString(dateString, examDay){
+        if(examDay == 'today'){
+            var today = new Date();
+        }else{
+            var today = new Date(examDay);
+        }	
+        var birthDate = new Date(dateString);
+        var y = birthDate.getFullYear() - today.getFullYear();
+        y *= -1;
+        var m = birthDate.getMonth() - today.getMonth();
+        var d = birthDate.getDate() - today.getDate();	
+        var m_inBirthday = age_how_many_days_in_this_month(birthDate.getFullYear(), birthDate.getMonth());	
+        var strMandarin=strEnglish="";
+        var try_today = new Date(1908, today.getMonth(), today.getDate());
+        var try_birthdate = new Date(1908, birthDate.getMonth(), birthDate.getDate());
+        var try_day = try_birthdate.getTime() - try_today.getTime();
+        if(try_day < 0){
+            if(d < 0){
+                m = today.getMonth() - birthDate.getMonth();
+                d = today.getDate() - birthDate.getDate();			
+            }else{
+                m = today.getMonth() - birthDate.getMonth() - 1;
+                d = m_inBirthday - birthDate.getDate() + today.getDate();
+            }
+        }else if(try_day == 0){
+            m = 0;
+            d = 0;			
+        }else{
+            y -= 1;
+            if(d < 0){
+                m = 12 - (birthDate.getMonth() + 1) + (today.getMonth() + 1);
+                d = today.getDate() - birthDate.getDate();			
+            }else{
+                m = 12 - (birthDate.getMonth() + 1) + (today.getMonth() + 1) - 1;
+                d = m_inBirthday - birthDate.getDate() + today.getDate();
+            }
+        }
+        strMandarin=y+"歲"+m+"月"+d+"天";		
+        strEnglish=y+"Y"+m+"MO";
+        var str=[strMandarin,strEnglish];
+        return str;
+    }
+    
+    function age_getAge_inDecimal(dateString, examDay){
+        const msInYear = 31556926000;
+        if(examDay == 'today'){
+            var today = new Date();
+        }else{
+            var today = new Date(examDay);
+        }
+        var birthDate = new Date(dateString);
+        var age_ms = today.getTime() - birthDate.getTime();
+        var age_y = age_ms / msInYear; 
+        var age_round = Math.round(age_y * 100) / 100;
+        return age_round;
+    }
+    
+    function age_how_many_days_in_this_month(what_year, what_month){
+        var m = -999;
+        var y = what_year % 4;
+        switch(what_month){
+            case 0:		m = 31;		break;
+            case 1:
+                m = ((y == 0)?29:28);	break;
+            case 2:     m = 31;		break;
+            case 3:		m = 30;		break;
+            case 4:		m = 31;		break;
+            case 5:		m = 30;		break;
+            case 6:		m = 31;		break;
+            case 7:		m = 31;		break;
+            case 8:		m = 30;		break;
+            case 9:		m = 31;		break;
+            case 10:	m = 30;		break;
+            case 11:	m = 31;		break;
+            default:	m = 30;		break;
+        }
+        return m; 
+    }
+    
+    function age_get_percentile_array_year_month_old_to_decimal(arr_yearOld, arr_monthOld){
+        var iStop = arr_yearOld.length;
+        var i = 0;
+        var age;
+        var arr_age = new Array();
+        for(i=0;i<iStop;i++){
+            age = arr_yearOld[i] + (arr_monthOld[i] / 12);			
+            arr_age.push(age);
+        }
+        return arr_age;
+    }
+    
+    function gd_determine_age_interval(age){
+        var arr_age = new Array;
+        arr_age = cur_get_percentile_arr_age();
+        var iStop = arr_age.length - 1;
+        var falseToStop = true;
+        var i = 0;		
+        while(falseToStop){
+            if((age >= arr_age[iStop])){
+                falseToStop = false;	i = iStop;				
+            }else if((arr_age[i] <= age) && (arr_age[i+1] > age)){
+                falseToStop = false;			
+            }else{
+                i++;
+            }
+        }
+        return i;
+    }
+    
+    function gd_calculate_above_or_below_determineValueOnLine(arr_value, ageInterval, age){
+        var arr_age = new Array();	arr_age = cur_get_percentile_arr_age();
+        var i = ageInterval;
+        var iStop = (arr_age.length - 1);
+        var valueOnLine = 0.01;		
+        if(i >= iStop){
+            valueOnLine = arr_value[iStop];
+        }else{
+            valueOnLine = (((age - arr_age[i]) * (arr_value[i+1] - arr_value[i]))/(arr_age[i+1] - arr_age[i])) + arr_value[i];
+        }
+        return valueOnLine
+    }
+    
+    function Nz(fieldToCheck, valueIfEmpty){
+        if (fieldToCheck !== undefined && fieldToCheck !== "" && fieldToCheck !== null) {
+            return fieldToCheck;
+        } else {
+            return valueIfEmpty;
+        }
+    }
+    
+    function gd_isIntegerKey(evt){
+        var charCode = (evt.which) ? evt.which : event.keyCode
+        if((charCode > 31 && charCode < 48) || charCode > 57)
+            return false;
+        return true;
+    }
+    
+    function gd_isNumberKey(evt){
+        var charCode = (evt.which) ? evt.which : event.keyCode
+        if((charCode > 31 && charCode < 48 && charCode != 46) || charCode > 57)
+            return false;
+        return true;
+    }
+    
+    function gd_debug_resize(){
+        var w = parseInt(window.outerWidth);
+        var h = parseInt(window.outerHeight);
+        var x = "User-agent header sent: " + navigator.userAgent;    	
+        var txt = "Window size: width=" + w + ", height=" + h + "<br>" + x;	
+        document.getElementById("body_resize").innerHTML = txt;	
+    }
+    
+    function gd_determine_exact_height(intAge ,dblHeight ,strGender ,nowOrFuture){
+        var i = gd_determine_age_interval(intAge);	
+        var dblFutureHeight = 0.01;
+        var strRtn = '';	
+        var strHeightPercentile = '';
+        if(nowOrFuture == 'future'){	
+            strHeightPercentile = cp_calculate_above_or_below_line_determinePercentile(dblHeight, strGender, i, intAge, "height");
+        }else{
+            var arrAge = new Array();
+            arrAge = cur_get_percentile_arr_age();
+            var aStop = arrAge.length - 1; 	
+            var AgeMax = arrAge[aStop];
+            strHeightPercentile = cp_calculate_above_or_below_line_determinePercentile(dblHeight, strGender, aStop, AgeMax, "height");	
+        }
+        switch(strHeightPercentile[0]){
+            case "<3%":				
+            case "3-15%":
+                dblFutureHeight = gd_determine_exact_percentile_in_interval("=3%", "=15%", strGender, intAge, dblHeight ,nowOrFuture);
+                break;			
+            case "15-50%":
+                dblFutureHeight = gd_determine_exact_percentile_in_interval("=15%", "=50%", strGender, intAge, dblHeight ,nowOrFuture);
+                break;
+            case "50-85%":
+                dblFutureHeight = gd_determine_exact_percentile_in_interval("=50%", "=85%", strGender, intAge, dblHeight ,nowOrFuture);
+                break;
+            case "85-97%":					
+            case ">97%":
+                dblFutureHeight = gd_determine_exact_percentile_in_interval("=85%", "=97%", strGender, intAge, dblHeight ,nowOrFuture);
+                break;
+            case "=3%":
+            case "=15%":
+            case "=50%":
+            case "=85%":
+            case "=97%":
+                if(nowOrFuture == 'future'){
+                    dblFutureHeight = gd_determine_end_height_on_line(strHeightPercentile[0], strGender);
+                }else{
+                    dblFutureHeight = gd_determine_exact_height_on_line(strHeightPercentile[0], strGender, intAge);
+                }	
+                break;					
+        }
+        str_nowOrFuture_rtn = (nowOrFuture == 'future')?"<b>骨齡(百分位:" + strHeightPercentile[0] + ")</b>預測未來身高":"<b>遺傳身高</b>預測現在身高";		
+        return strRtn = str_nowOrFuture_rtn + "約在:" + dblFutureHeight + "cm附近";
+    } 
+
+    function gd_determine_exact_percentile_in_interval(strPercentile_min, strPercentile_max, strGender, age, dblHeight ,nowOrFuture){
+        var bMaxNow = gd_determine_exact_height_on_line(strPercentile_max, strGender, age);
+        var bMinNow = gd_determine_exact_height_on_line(strPercentile_min, strGender, age);
+        var bMaxFuture = gd_determine_end_height_on_line(strPercentile_max, strGender);
+        var bMinFuture = gd_determine_end_height_on_line(strPercentile_min, strGender);
+        var parameter = 0.01;
+        var dblRtn = 0.01;
+        if(nowOrFuture == 'future'){
+            parameter = (dblHeight - bMinNow)/(bMaxNow - bMinNow);
+            dblRtn = ((bMaxFuture - bMinFuture) * parameter) + bMinFuture;
+        }else{
+            parameter = (dblHeight - bMinFuture)/(bMaxFuture - bMinFuture);
+            dblRtn = ((bMaxNow - bMinNow) * parameter) + bMinNow;
+        }
+        dblRtn = Math.round(dblRtn * 100) / 100;   
+        return dblRtn;
+    }
+
+    function gd_determine_exact_height_on_line(str_percentile, str_gender, age){
+        var arr_value = new Array();
+        arr_value = gd_get_height_array(str_percentile, str_gender);	
+        var valueOnLine = 0.01;
+        var ageInterval = gd_determine_age_interval(age);		
+        valueOnLine = gd_calculate_above_or_below_determineValueOnLine(arr_value, ageInterval, age);
+        return valueOnLine;
+    }
+
+    function gd_determine_end_height_on_line(str_percentile, str_gender){
+        var arr_value = new Array();
+        arr_value = gd_get_height_array(str_percentile, str_gender);	
+        var iStop = arr_value.length - 1;
+        var dblRtn = arr_value[iStop];
+        return dblRtn;		
+    }
+
+    function gd_get_height_array(str_percentile, str_gender){
+        var strGen='';
+        if(str_gender=='_m' || str_gender=='_m'){
+            strGen=str_gender;
+        }else{
+            strGen=(str_gender=='male'?'_m':'_f');
+        }
+        var arr = new Array();		arr = cur_get_percentile_arr_gender(strGen);	
+        var arr_value = new Array();
+        var i = 0;
+        switch(str_percentile){
+            case "=3%":
+                i = 0;	break;
+            case "=15%":
+                i = 1;	break;
+            case "=50%":
+                i = 2;	break;
+            case "=85%":
+                i = 3;	break;
+            case "=97":
+                i = 4;	break;
+        }
+        arr_value = arr[i][0];
+        return arr_value;		
+    }
+
+    function gd_numOk(obj){
+        var rtn=(isNaN(parseInt(obj))?false:true);
+        if(rtn){
+            rtn=(parseInt(obj)==0?false:true);
+            if(rtn){
+                rtn=(parseInt(obj)<0?false:true);
+            }
+        }
+        return rtn;
+    }
+
+    function fool_hide_advance(gender){
+        var strGender = ((gender == 'male')?'_m':'_f');	
+        var id = 'form_predict' + strGender;	
+        var o = document.getElementById(id);
+        if( o.style.display=='inline'){
+            o.style.display='none';
+        }else{
+            o.style.display='inline';    
+        }
+    }
+
+    function fool_input_array(){
+        var d = new Date();		var thisYear = d.getFullYear() - 1911;  	
+        var arr = new Array();
+        var input = new Array();	var minVal = new Array();	var maxVal = new Array();	var strErr = new Array();	
+        input.push("inp_year");				minVal.push(0);		maxVal.push(thisYear);	strErr.push("inp_year_error");
+        input.push("inp_month");			minVal.push(1);		maxVal.push(12);		strErr.push("inp_month_error");
+        input.push("inp_day");				minVal.push(1);		maxVal.push(31);		strErr.push("inp_day_error");
+        input.push("inp_height");			minVal.push(25);	maxVal.push(255);		strErr.push("inp_height_error");
+        input.push("inp_weight");			minVal.push(0.1);	maxVal.push(255);		strErr.push("inp_weight_error");
+        input.push("inp_bbw");			    minVal.push(400);	maxVal.push(6000);		strErr.push("inp_bbw_error");
+        input.push("inp_height_father");	minVal.push(25);	maxVal.push(255);		strErr.push("inp_height_father_error");
+        input.push("inp_height_mother");	minVal.push(25);	maxVal.push(255);		strErr.push("inp_height_mother_error");
+        arr.push(input);					arr.push(minVal);	arr.push(maxVal);		arr.push(strErr);
+        return arr;
+    }
+
+    function fool_input_array_ph(){	
+        var arr = new Array();
+        var input = new Array();	var minVal = new Array();	var maxVal = new Array();	var strErr = new Array();	
+        input.push("inp_boneAge_year_ph");	minVal.push(0);		maxVal.push(105);	strErr.push("inp_year_ph_error");
+        input.push("inp_boneAge_month_ph");	minVal.push(0);		maxVal.push(11);	strErr.push("inp_month_ph_error");
+        input.push("inp_height_ph");		minVal.push(25);	maxVal.push(255);	strErr.push("inp_height_ph_error");
+        arr.push(input);					arr.push(minVal);	arr.push(maxVal);	arr.push(strErr);
+        return arr;
+    }
+
+    function fool_input_array_bbw(){	
+        var arr = new Array();
+        var input = new Array(); var minVal = new Array(); var maxVal = new Array(); var strErr = new Array();	
+        input.push("inp_bbw");   minVal.push(500);         maxVal.push(5000);        strErr.push("inp_bbw_error");
+        input.push("inp_ga");    minVal.push(23);          maxVal.push(45);          strErr.push("inp_ga_error");
+        arr.push(input);         arr.push(minVal);         arr.push(maxVal);         arr.push(strErr);
+        return arr;
+    }
+
+    function fool_check_range(gender, percentile_or_boneAgePredict){		
+        var trueToDisable = false;
+        var strGender = ((gender == 'male')?'_m':'_f');	
+        var strRtn = "";		var check = "";
+        var arr = new Array();
+        switch(percentile_or_boneAgePredict){
+            case 'percentile':arr = fool_input_array();     break;
+            case 'boneAge':   arr = fool_input_array_ph();  break;
+            case 'bbw':       arr = fool_input_array_bbw(); break;			
+        }
+        arr = (percentile_or_boneAgePredict == 'percentile')?fool_input_array():fool_input_array_ph();
+        var input  = new Array();	input  = arr[0];	
+        var minVal = new Array();	minVal = arr[1];
+        var maxVal = new Array();	maxVal = arr[2];
+        var strErr = new Array();	strErr = arr[3];
+        var i = 0;
+        var iStop = input.length;	
+        for(i=0;i<iStop;i++){
+            input[i] += strGender;	strErr[i] += strGender;	strRtn = "";
+            check = parseFloat(document.getElementById(input[i]).value);
+            if(check != 0){
+                if(check < minVal[i] || check > maxVal[i]){
+                    strRtn = "<b>(輸入的數值必須介於<i>" + minVal[i] + "</i>和<i>" + maxVal[i] + "</i>之間)</b>";
+                    trueToDisable = true;
+                }
+            }			
+            document.getElementById(strErr[i]).innerHTML = strRtn;
+        }
+        if(trueToDisable == false){
+            trueToDisable = fool_checkDateValidate(gender);
+        }
+        var strButton = (percentile_or_boneAgePredict == 'percentile')?"button":"button_ph";
+        strButton += strGender;		
+        if(trueToDisable){
+            document.getElementById(strButton).disabled = true;
+        }else{
+            document.getElementById(strButton).disabled = false;
+        }
+    }
+
+    function fool_checkDateValidate(gender){	
+        var strRtn = "";
+        var strGender = ((gender == 'male')?'_m':'_f');	
+        var input = new Array();		
+        input.push("inp_year");		
+        input.push("inp_month");	
+        input.push("inp_day");		
+        var i = 0;	var iStop = input.length;	
+        for(i=0;i<iStop;i++){
+            input[i] = input[i] + strGender;
+        }
+        var strCheckY = document.getElementById(input[0]).value;
+        var strCheckM = document.getElementById(input[1]).value;
+        var strCheckD = document.getElementById(input[2]).value;			
+        var checkY = parseFloat(strCheckY);
+        var checkM = parseFloat(strCheckM);
+        var checkD = parseFloat(strCheckD);	
+        if(strCheckY != "" && checkY == 0){
+            strRtn = "年不可以輸入「0」!請檢查!";
+        }
+        if(strCheckM != "" && checkM == 0){
+            strRtn = "月不可以輸入「0」!請檢查!";
+        }
+        if(strCheckD != "" && checkD == 0){
+            strRtn = "日不可以輸入「0」!請檢查!";
+        }
+        if(checkY > 0 && checkM > 0 && checkD > 0){
+            checkY += 1911;
+            var strDateString = checkY + "/" + checkM + "/" + checkD;
+            var d_now = new Date();
+            var d_by_user = new Date(strDateString);
+            if(d_by_user.getTime() >= d_now.getTime()){
+                strRtn = "輸入的日期有錯!您輸入的生日日期大於今天!請檢查!\n";
+            }		
+        }	
+        if(checkM > 0 && checkD > 0){
+            var int_month_in_javascript = checkM - 1;
+            var days_in_the_month = age_how_many_days_in_this_month(checkY, int_month_in_javascript);
+            if(checkD > days_in_the_month){
+                strRtn = "輸入的日期有錯!您輸入的日期大於" + checkM + "月日期，" + checkM + "月只有" + days_in_the_month + "天!請檢查!"
+            }		
+        }	
+        if(strRtn != ""){
+            alert(strRtn); 
+            return true;
+        }else{		
+            return false;
+        }
+    }
+
+    function fool_checkYearMonthDay(year,month,day){
+        var strRtn = "";	
+        if(year == ""){strRtn += "<br>因為沒有輸入「年」會當機，所以「年」暫時帶入「民國60年」";}
+        if(month == ""){strRtn += "<br>因為沒有輸入「月」會當機，所以「月」暫時帶入「1月」";}
+        if(day == ""){strRtn += "<br>因為沒有輸入「日」會當機，所以「日」暫時帶入「1日」";}
+        return strRtn;
+    }
+
+    function fool_check_ph(height_input, height_default){
+        var strRtn = "";			
+        if(height_input == ""){strRtn += "<br>因為沒有輸入「身高」會當機，所以「身高」暫時帶入「" + height_default + "公分」";}
+        return strRtn;
+    }
+
+    function bone_calculate_predict_height(strGender){	
+        var str = ((strGender=='male')?"_m":"_f") 			
+        var strBoneY = document.getElementById("inp_boneAge_year_ph" + str).value;
+        strBoneY = parseInt(Nz(strBoneY, 0));
+        var strBoneM = document.getElementById("inp_boneAge_month_ph" + str).value;		
+        strBoneM = parseInt(Nz(strBoneM, 0));		
+        var strHeight = document.getElementById("inp_height_ph" + str).value
+        var strNoEnter = fool_check_ph(strHeight, 135);	
+        var dblHeight  = parseFloat(Nz(strHeight, 135)); 				
+        var strGenderToHTML = "性別：" + ((strGender == 'male')?"(男)":"(女)");	
+        var intBoneAge = strBoneY + (strBoneM / 12);	
+        intBoneAge = Math.round(intBoneAge * 100) / 100;	
+        var strBoneAgeString = "您輸入的骨齡是:" + strBoneY + "歲" + strBoneM + "月(" + intBoneAge + "歲)"; 
+        var strHeight = "您輸入的身高是:" + dblHeight + "cm";							
+        var strPredictHeight = gd_determine_exact_height(intBoneAge ,dblHeight ,strGender, 'future');	
+        var strInnerHTML = strGenderToHTML + "<br>" + strBoneAgeString  + "<br>" + strHeight + "<br>" + 
+                            strPredictHeight + strNoEnter + "<hr>";			
+        document.getElementById("result_ph" + str).innerHTML = strInnerHTML;
+    }
+
+    function cp_calculate_age(strGender){
+        var trueToGo=false;
+        var ageDecimal=0.0;
+        var ageMandarin=ageEnglish="";	 	
+        var strBirth="";
+        var strAgeY=document.getElementById("inp_year" +strGender).value;
+        var strAgeM=document.getElementById("inp_month"+strGender).value;
+        var strAgeD=document.getElementById("inp_day"  +strGender).value;
+        var height=document.getElementById("inp_height"+strGender).value; 
+        var weight=document.getElementById("inp_weight"+strGender).value; 		
+        if(gd_numOk(strAgeY)&&gd_numOk(strAgeM)&&gd_numOk(strAgeD)&&gd_numOk(height)&&gd_numOk(weight)){
+            trueToGo=true;
+            strAgeY=parseFloat(Nz(strAgeY)); strAgeM=parseFloat(Nz(strAgeM)); strAgeD=parseFloat(Nz(strAgeD));
+            strBirth="您輸入的生日是民國:"+strAgeY+"年"+strAgeM+"月"+strAgeD+"日";
+            strAgeY += 1911;			
+            var strDateString=strAgeY+"/"+strAgeM+"/"+strAgeD;		
+            var age=age_getAge_inString(strDateString,'today');				
+            ageDecimal=age_getAge_inDecimal(strDateString, 'today');
+            ageMandarin="年齡:"+age[0];
+            ageEnglish="age:"+age[1];		 
+        }
+        var rtn=[trueToGo,strBirth,ageDecimal,ageMandarin,ageEnglish];
+        return rtn;
+    }
+
+    function cp_calculate_bbw(strGender, twin){
+        var bbw=document.getElementById("inp_bbw" + strGender).value;
+        var wks=document.getElementById("inp_ga" + strGender).value;  
+        var rtn=['','',''];
+        if(gd_numOk(bbw) && gd_numOk(wks)){
+            rtn=cp_calculate_bbw_estimateWeight10thPercentileGestationalAge(wks, bbw, strGender, twin);	  
+        }	
+        return rtn;	
+    }
+
+    function cp_calculate_bbw_estimateWeight10thPercentileGestationalAge(week, weight, strGender, twin) {  
+        let tenthPercentile = 0;
+        let ninetiethPercentile = 0;
+        let rtn = ['', '', ''];	
+        let data10th, data90th;
+        if(strGender == "_m"){
+            if(twin == "singleton"){
+                data10th = [[21.5, 397.0],[23, 496.0],[24, 562.7],[25, 635.7],[26, 719.2],[27, 816.2],[28, 928.7],[29, 1057.8],[30, 1203.7],[31, 1365.4],[32, 1541.2],[33, 1728.3],[34, 1922.9],[35, 2120.2],[36, 2314.6],[37, 2499.3],[38, 2666.7],[39, 2808.3],[40, 2914.2],[41, 2974.1],[42, 2976.4],[43, 2908.5],[44, 2756.9]];
+                data90th = [[21.5, 675.2],[23, 753.5],[24, 841.9],[25, 957.4],[26, 1097.9],[27, 1261.0],[28, 1444.2],[29, 1644.7],[30, 1859.2],[31, 2084.4],[32, 2316.6],[33, 2551.8],[34, 2785.7],[35, 3013.9],[36, 3231.5],[37, 3433.5],[38, 3614.5],[39, 3769.0],[40, 3890.9],[41, 3974.2],[42, 4012.3],[43, 3998.6],[44, 3926.0]];
+            }else{
+                data10th = [[22, 394.9],[23, 440.9],[24, 495.2],[25, 566.9],[26, 654.7],[27, 757.1],[28, 872.3],[29, 998.4],[30, 1133.4],[31, 1275.1],[32, 1421.2],[33, 1569.2],[34, 1716.5],[35, 1860.2],[36, 1997.5],[37, 2125.2],[38, 2240.1],[39, 2338.8],[40, 2417.8],[41, 2501.8]];
+                data90th = [[22, 571.7],[23, 686.3],[24, 790.7],[25, 914.5],[26, 1055.1],[27, 1210.0],[28, 1376.6],[29, 1552.4],[30, 1735.0],[31, 1922.0],[32, 2111.4],[33, 2301.2],[34, 2489.5],[35, 2674.9],[36, 2856.2],[37, 3032.3],[38, 3202.7],[39, 3367.2],[40, 3525.9],[41, 3828.5]];
+            }	
+        }else{
+            if(twin == "singleton"){
+                data10th = [[21.5, 330.2],[23, 448.8],[24, 519.3],[25, 591.0],[26, 669.3],[27, 758.4],[28, 861.6],[29, 981.0],[30, 1117.5],[31, 1270.8],[32, 1439.7],[33, 1621.7],[34, 1813.1],[35, 2009.3],[36, 2204.4],[37, 2391.3],[38, 2561.9],[39, 2706.9],[40, 2816.0],[41, 2877.5],[42, 2878.9],[43, 2806.3],[44, 2644.7]];
+                data90th = [[21.5, 655.0],[23, 722.2],[24, 804.4],[25, 914.5],[26, 1050.3],[27, 1209.5],[28, 1389.2],[29, 1586.5],[30, 1798.1],[31, 2020.2],[32, 2249.0],[33, 2480.2],[34, 2709.2],[35, 2931.4],[36, 3141.4],[37, 3334.0],[38, 3503.2],[39, 3643.2],[40, 3747.4],[41, 3809.4],[42, 3822.2],[43, 3778.4],[44, 3670.6]];
+            }else{
+                data10th = [[22, 414.3],[23, 446.0],[24, 490.0],[25, 551.2],[26, 628.3],[27, 719.9],[28, 824.6],[29, 940.6],[30, 1066.2],[31, 1199.6],[32, 1338.8],[33, 1481.7],[34, 1625.9],[35, 1769.0],[36, 1908.6],[37, 2041.8],[38, 2165.9],[39, 2277.8],[40, 2374.3],[41, 2507.6]];
+                data90th = [[22, 538.7],[23, 662.1],[24, 758.0],[25, 872.5],[26, 1002.7],[27, 1145.9],[28, 1299.9],[29, 1462.5],[30, 1631.8],[31, 1806.1],[32, 1984.1],[33, 2164.5],[34, 2346.4],[35, 2529.1],[36, 2712.2],[37, 2895.4],[38, 3078.7],[39, 3262.5],[40, 3447.2],[41, 3822.5]];
+            }
+        }
+        if (week <= data10th[0][0]) {
+            tenthPercentile = data10th[0][1];
+        } else if (week >= data10th[data10th.length - 1][0]) {
+            tenthPercentile = data10th[data10th.length - 1][1];
+        } else {
+            for (let i = 0; i < data10th.length - 1; i++) {
+                const [x0, y0] = data10th[i];
+                const [x1, y1] = data10th[i + 1];
+                if (week >= x0 && week <= x1) {
+                    const slope10th = (y1 - y0) / (x1 - x0);
+                    tenthPercentile = y0 + slope10th * (week - x0);
+                    break;
+                }
+            }
+        }
+        if (week <= data90th[0][0]) {
+            ninetiethPercentile = data90th[0][1];
+        } else if (week >= data90th[data90th.length - 1][0]) {
+            ninetiethPercentile = data90th[data90th.length - 1][1];
+        } else {
+            for (let i = 0; i < data90th.length - 1; i++) {
+                const [x0, y0] = data90th[i];
+                const [x1, y1] = data90th[i + 1];
+                if (week >= x0 && week <= x1) {
+                    const slope90th = (y1 - y0) / (x1 - x0);
+                    ninetiethPercentile = y0 + slope90th * (week - x0);
+                    break;
+                }
+            }
+        }
+        if (weight > tenthPercentile && weight < ninetiethPercentile) {
+            rtn[0] = `懷孕週數: ${week} 週, 出生體重: ${weight} 克 (出生體重正常)`;
+            rtn[1] = `BBW: ${weight} g` + `(` + twin + `)`;
+            rtn[2] = `GA: ${week} weeks (Appropriate for gestational age, 10th = ${Math.round(tenthPercentile)}g)`;
+        } else if (weight <= tenthPercentile) {
+            rtn[0] = `懷孕週數: ${week} 週, 出生體重: ${weight} 克 (出生體重 <10th%, SGA)`;
+            rtn[1] = `BBW: ${weight} g` + `(` + twin + `)`;
+            rtn[2] = `GA: ${week} weeks (Small for gestational age, 10th% = ${Math.round(tenthPercentile)}g)`;
+        } else {
+            rtn[0] = `懷孕週數: ${week} 週, 出生體重: ${weight} 克 (出生體重 >90th%, LGA)`;
+            rtn[1] = `BBW: ${weight} g` + `(` + twin + `)`;
+            rtn[2] = `GA: ${week} weeks (Large for gestational age, 90th% = ${Math.round(ninetiethPercentile)}g)`;
+        }
+        return rtn;
+    }
+
+    function cp_calculate_parent_height(strGender){
+        var strMandarin=strEnglish="";	 
+        var heightFather=document.getElementById("inp_height_father"+strGender).value; 
+        var heightMother=document.getElementById("inp_height_mother"+strGender).value; 
+        if(gd_numOk(heightFather)&&gd_numOk(heightMother)){
+            heightFather=parseFloat(Nz(heightFather)); 
+            heightMother=parseFloat(Nz(heightMother)); 
+            var heightGenetic = (heightFather + heightMother)/2;
+            heightGenetic = Math.round(heightGenetic * 100) / 100;						
+            heightGenetic+=((strGender=='_m')?6:(-6));		
+            strMandarin="父高:"+heightFather+"cm,母高:"+heightMother+"cm,遺傳身高:"+heightGenetic+"cm<br>";	
+            strEnglish="Father BL:"+heightFather+"cm,Mother BL:"+heightMother+"cm,Target BL:"+heightGenetic+"cm";	
+        }
+        var rtn=[strMandarin,strEnglish];
+        return rtn;
+    }
+
+    function cp_calculate_above_or_below_line_determineAge(age, str_gender){
+        var height=parseFloat(document.getElementById("inp_height"+str_gender).value); 
+        var weight=parseFloat(document.getElementById("inp_weight"+str_gender).value);
+        var i=gd_determine_age_interval(age);	
+        var strHeight=cp_calculate_above_or_below_line_determinePercentile(height, str_gender, i, age, "height");
+        var strWeight=cp_calculate_above_or_below_line_determinePercentile(weight, str_gender, i, age, "weight");			
+        var strHeightMandarin="身高:"+height+"cm(百分位:"+strHeight[0]+"),";
+        var strWeightMandarin="體重:"+weight+"kg(百分位:"+strWeight[0]+")";
+        var strMandarin=strHeightMandarin+strWeightMandarin;
+        var strHeightEnglish="BL:"+height+"cm("+strHeight[0]+"),";
+        var strWeightEnglish="BW:"+weight+"kg("+strWeight[0]+")";
+        var strEnglish=strHeightEnglish+strWeightEnglish;
+        var strRange="BL:"+strHeight[0]+"=("+strHeight[1]+") BW:"+strWeight[0]+"=("+strWeight[1]+")";
+        var strRtn=[strMandarin,strEnglish,strRange];
+        return strRtn;		
+    }
+
+    function cp_calculate_above_or_below_line(strGender){		
+        var strInnerHTML='<h1><font color="red">至少必須輸入生日及身高體重!</font></h1>';
+        var str=((strGender=='male')?"_m":"_f");
+        var age=cp_calculate_age(str);
+        var trueToGo=   age[0];
+        var dateInput=  age[1];
+        var ageDecimal= age[2];
+        var ageMandarin=age[3];
+        var ageEnglish= age[4];
+        if(trueToGo){			
+            var strGenderToHTML="性別:"+((strGender=='male')?"(男)":"(女)");
+            var radios = document.getElementsByName("pregnancy_type" + str);
+            var twin;
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked) {
+                    twin = radios[i].value;
+                    break;
+                }
+            }			
+            var bbw=cp_calculate_bbw(str, twin);			
+            var percentile=cp_calculate_above_or_below_line_determineAge(ageDecimal,str); 
+            var geneticBL=cp_calculate_parent_height(str);				
+            var strHead=strGenderToHTML+","+ageMandarin+"<br>";
+            var strMandarin=percentile[0]+"<br>";
+            strMandarin+=bbw[0]+"<br>";
+            strMandarin+=geneticBL[0];
+            var strSeparate="<br>"+"================================="+"<br><br>";
+            var strEnglish=percentile[1]+
+                           (bbw[1]==""?"":","+bbw[1])+
+                           (bbw[2]==""?"":"<br>"+bbw[2])+
+                           (geneticBL[1]==""?"":"<br>"+geneticBL[1])+
+                           "<br>"+strGender+" ref:" + percentile[2];
+            strInnerHTML=strHead+strMandarin+strSeparate+strEnglish; 		
+        }
+        document.getElementById("result" + str).innerHTML = strInnerHTML;
+    }
+
+    function cp_calculate_above_or_below_line_determinePercentile(value, str_gender, ageInterval, age, str_heightOrWeight){
+        var strGen='';
+        if(str_gender=='_m' || str_gender=='_m'){
+            strGen=str_gender;
+        }else{
+            strGen=(str_gender=='male'?'_m':'_f');
+        }
+        var arr = new Array();		arr = cur_get_percentile_arr_gender(strGen);	
+        var arr_value = new Array();
+        var i = 0;
+        var iStop = 5;
+        var valueOnLine = 0.01;
+        var valueOnLineB4 = 0.01;
+        var falseToStop = true;
+        var strRtn = ["",""];			
+        while(falseToStop && (i < iStop)){			
+            arr_value = (str_heightOrWeight == "height")?arr[i][0]:arr[i][1];
+            valueOnLineB4=valueOnLine;
+            valueOnLine = gd_calculate_above_or_below_determineValueOnLine(arr_value, ageInterval, age)
+            if(i == 0){
+                if(value < valueOnLine){
+                    falseToStop = false;	strRtn[0] = "<3%";
+                }else if(value == valueOnLine){
+                    falseToStop = false;	strRtn[0] = "=3%";
+                }
+            }else if((i > 0) && (i <= 3)){
+                switch(i){
+                    case 1:
+                        if(value < valueOnLine){
+                            falseToStop = false;	strRtn[0] = "3-15%";
+                        }else if(value == valueOnLine){
+                            falseToStop = false;	strRtn[0] = "=15%";
+                        }	
+                        break;
+                    case 2:
+                        if(value < valueOnLine){
+                            falseToStop = false;	strRtn[0] = "15-50%";
+                        }else if(value == valueOnLine){
+                            falseToStop = false;	strRtn[0] = "=50%";
+                        }
+                        break;
+                    case 3:
+                        if(value < valueOnLine){
+                            falseToStop = false;	strRtn[0] = "50-85%";
+                        }else if(value == valueOnLine){
+                            falseToStop = false;	strRtn[0] = "=85%";
+                        }
+                        break;
+                }				
+            }else{
+                if(value < valueOnLine){
+                    falseToStop = false;	strRtn[0] = "85-97%";
+                }else if(value == valueOnLine){
+                    falseToStop = false;	strRtn[0] = "=97%";
+                }else{
+                    falseToStop = false;	strRtn[0] = ">97%";
+                    valueOnLineB4=valueOnLine;
+                    valueOnLine=0.01;
+                }
+            }			
+            i++;			
+        }
+        if(valueOnLineB4 == 0.01){valueOnLineB4="";}else{valueOnLineB4=valueOnLineB4.toFixed(1);}
+        if(valueOnLine == 0.01){valueOnLine="";}else{valueOnLine=valueOnLine.toFixed(1);}
+        strRtn[1] = valueOnLineB4+"~"+valueOnLine;
+        return strRtn;
+    }
+
+    function cur_get_percentile_arr_gender(str_gender){	
+        var arr = new Array();
+        if(str_gender == '_m'){
+            arr.push(cur_get_percentile_arr_m03());
+            arr.push(cur_get_percentile_arr_m15());
+            arr.push(cur_get_percentile_arr_m50());
+            arr.push(cur_get_percentile_arr_m85());
+            arr.push(cur_get_percentile_arr_m97());
+        }else{
+            arr.push(cur_get_percentile_arr_f03());
+            arr.push(cur_get_percentile_arr_f15());
+            arr.push(cur_get_percentile_arr_f50());
+            arr.push(cur_get_percentile_arr_f85());
+            arr.push(cur_get_percentile_arr_f97());			
+        }
+        return arr;
+    }
+
+    function cur_get_percentile_arr_age(){
+        var arr_age = new Array();		
+        var arr_ageY = new Array();
+        var arr_ageM = new Array();		
+        arr_ageY.push(0);  arr_ageM.push(0);
+        arr_ageY.push(0);  arr_ageM.push(1);
+        arr_ageY.push(0);  arr_ageM.push(2);
+        arr_ageY.push(0);  arr_ageM.push(3);
+        arr_ageY.push(0);  arr_ageM.push(4);
+        arr_ageY.push(0);  arr_ageM.push(5);
+        arr_ageY.push(0);  arr_ageM.push(6);
+        arr_ageY.push(0);  arr_ageM.push(7);
+        arr_ageY.push(0);  arr_ageM.push(8);
+        arr_ageY.push(0);  arr_ageM.push(9);
+        arr_ageY.push(0);  arr_ageM.push(10);
+        arr_ageY.push(0);  arr_ageM.push(11);
+        arr_ageY.push(1);  arr_ageM.push(0);
+        arr_ageY.push(1);  arr_ageM.push(1);
+        arr_ageY.push(1);  arr_ageM.push(2);
+        arr_ageY.push(1);  arr_ageM.push(3);
+        arr_ageY.push(1);  arr_ageM.push(4);
+        arr_ageY.push(1);  arr_ageM.push(5);
+        arr_ageY.push(1);  arr_ageM.push(6);
+        arr_ageY.push(1);  arr_ageM.push(7);
+        arr_ageY.push(1);  arr_ageM.push(8);
+        arr_ageY.push(1);  arr_ageM.push(9);
+        arr_ageY.push(1);  arr_ageM.push(10);
+        arr_ageY.push(1);  arr_ageM.push(11);
+        arr_ageY.push(2);  arr_ageM.push(0);
+        arr_ageY.push(2);  arr_ageM.push(1);
+        arr_ageY.push(2);  arr_ageM.push(2);
+        arr_ageY.push(2);  arr_ageM.push(3);
+        arr_ageY.push(2);  arr_ageM.push(4);
+        arr_ageY.push(2);  arr_ageM.push(5);
+        arr_ageY.push(2);  arr_ageM.push(6);
+        arr_ageY.push(2);  arr_ageM.push(7);
+        arr_ageY.push(2);  arr_ageM.push(8);
+        arr_ageY.push(2);  arr_ageM.push(9);
+        arr_ageY.push(2);  arr_ageM.push(10);
+        arr_ageY.push(2);  arr_ageM.push(11);
+        arr_ageY.push(3);  arr_ageM.push(0);
+        arr_ageY.push(3);  arr_ageM.push(1);
+        arr_ageY.push(3);  arr_ageM.push(2);
+        arr_ageY.push(3);  arr_ageM.push(3);
+        arr_ageY.push(3);  arr_ageM.push(4);
+        arr_ageY.push(3);  arr_ageM.push(5);
+        arr_ageY.push(3);  arr_ageM.push(6);
+        arr_ageY.push(3);  arr_ageM.push(7);
+        arr_ageY.push(3);  arr_ageM.push(8);
+        arr_ageY.push(3);  arr_ageM.push(9);
+        arr_ageY.push(3);  arr_ageM.push(10);
+        arr_ageY.push(3);  arr_ageM.push(11);
+        arr_ageY.push(4);  arr_ageM.push(0);
+        arr_ageY.push(4);  arr_ageM.push(1);
+        arr_ageY.push(4);  arr_ageM.push(2);
+        arr_ageY.push(4);  arr_ageM.push(3);
+        arr_ageY.push(4);  arr_ageM.push(4);
+        arr_ageY.push(4);  arr_ageM.push(5);
+        arr_ageY.push(4);  arr_ageM.push(6);
+        arr_ageY.push(4);  arr_ageM.push(7);
+        arr_ageY.push(4);  arr_ageM.push(8);
+        arr_ageY.push(4);  arr_ageM.push(9);
+        arr_ageY.push(4);  arr_ageM.push(10);
+        arr_ageY.push(4);  arr_ageM.push(11);
+        arr_ageY.push(5);  arr_ageM.push(0);
+        arr_ageY.push(5);  arr_ageM.push(6);
+        arr_ageY.push(6);  arr_ageM.push(0);
+        arr_ageY.push(6);  arr_ageM.push(6);
+        arr_ageY.push(7);  arr_ageM.push(0);
+        arr_ageY.push(7);  arr_ageM.push(6);
+        arr_ageY.push(8);  arr_ageM.push(0);
+        arr_ageY.push(8);  arr_ageM.push(6);
+        arr_ageY.push(9);  arr_ageM.push(0);
+        arr_ageY.push(9);  arr_ageM.push(6);
+        arr_ageY.push(10); arr_ageM.push(0);
+        arr_ageY.push(10); arr_ageM.push(6);
+        arr_ageY.push(11); arr_ageM.push(0);
+        arr_ageY.push(11); arr_ageM.push(6);
+        arr_ageY.push(12); arr_ageM.push(0);
+        arr_ageY.push(12); arr_ageM.push(6);
+        arr_ageY.push(13); arr_ageM.push(0);
+        arr_ageY.push(13); arr_ageM.push(6);
+        arr_ageY.push(14); arr_ageM.push(0);
+        arr_ageY.push(14); arr_ageM.push(6);
+        arr_ageY.push(15); arr_ageM.push(0);
+        arr_ageY.push(15); arr_ageM.push(6);
+        arr_ageY.push(16); arr_ageM.push(0);
+        arr_ageY.push(16); arr_ageM.push(6);
+        arr_ageY.push(17); arr_ageM.push(0);
+        arr_ageY.push(17); arr_ageM.push(6);
+        arr_ageY.push(18); arr_ageM.push(0);
+        arr_ageY.push(18); arr_ageM.push(6);
+        arr_age = age_get_percentile_array_year_month_old_to_decimal(arr_ageY, arr_ageM);
+        return arr_age;
+    }
+
+    // 生長曲線數據 (男性 3%)
+    function cur_get_percentile_arr_m03(){
+        var arr_age = new Array();		arr_age = cur_get_percentile_arr_age();
+        var arr_height = [46.3,51,54.5,57.5,60,62,63.6,65,66.5,68,69,70,71.3,72,73.5,74.5,75.5,76,77.2,78,79,80,80.5,81.2,82.1,82.1,83,83.5,84,85,85.5,86,87,87.5,88,88.5,89.1,89.7,90,91,91.5,92,92.4,93,93.5,94,94.5,95,95.4,96,96.5,97,97.5,98,98.4,99,99.5,100,100.1,100.5,101.2,103.9,106.5,109.2,111.8,114.5,117,119.5,121.8,124,126,128,130.5,133,135.6,138.2,141.9,145.5,149.3,153,155.5,158,159.3,160.5,160.9,161,161.5,162];
+        var arr_weight = [2.5,3.4,4.3,5,5.6,6,6.4,6.8,7,7.2,7.5,7.7,7.8,8,8.1,8.4,8.5,8.8,8.9,9,9.1,9.3,9.5,9.6,9.8,10,10.1,10.2,10.5,10.6,10.7,10.9,11,11.1,11.2,11.3,11.4,11.6,11.7,11.8,11.9,12,12.2,12.3,12.4,12.5,12.6,12.8,12.9,13,13.1,13.2,13.3,13.5,13.6,13.7,13.8,13.9,14,14.1,14.3,15.3,16.3,17.4,18.4,19.4,20.3,21.2,22.1,23,24,25,26.3,27.6,29.3,30.5,32.8,35,38,41,43,45,46.8,48.5,49.3,50,50.3,50.5];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_m15(){
+        var arr_height = [47.9,53,56.5,59,62,63.5,65.4,67,68,69.5,71,72,73.3,74.5,75.5,76.5,77.5,78.5,79.5,80,81,82,83,84,84.6,84.6,85.5,86,87,88,88.4,89,90,90.5,91,91.5,92.2,93,93.5,94,94.5,95,95.7,96,97,97.5,98,98.5,99,99.5,100,100.5,101,101.5,102.1,102.5,103,103.5,104,104.5,105.2,107.9,110.5,113.2,115.8,118.5,121.3,124,126,128,130.5,133,135.6,138.1,141.1,144,148.5,153,156.3,159.6,161.3,163,164,165,165.5,166,166,166];
+        var arr_weight = [2.9,3.8,4.9,5.5,6.2,6.7,7.1,7.4,7.7,8,8.1,8.4,8.6,8.9,9,9.1,9.4,9.6,9.7,9.9,10,10.2,10.5,10.7,10.8,11,11.1,11.3,11.5,11.6,11.8,12,12.1,12.2,12.4,12.5,12.7,12.8,13,13.1,13.2,13.4,13.5,13.7,13.9,14,14.1,14.2,14.3,14.5,14.6,14.8,14.9,15,15.2,15.2,15.4,15.6,15.7,15.9,16,17.1,18.2,19.3,20.4,21.5,22.7,23.8,24.8,25.8,26.9,28,29.6,31.2,33.1,35,38,41,44,47,49,51,52,53,54,55,55];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_m50(){
+        var arr_height = [49.9,55,58.5,61.5,64,66,67.6,69,70.5,72,73,74.5,75.7,77,78,79,80,81,82.3,83,84,85,86,87,87.8,88,89,89.5,90.5,91,91.9,93,93.5,94,95,95.5,96.1,97,97.5,98,98.5,99,99.9,100.5,101,101.5,102,103,103.5,104,104.5,105,105.5,106,106.7,107.1,108,108.5,109,109.5,110,112.8,115.6,118.4,121.2,124,126.8,129.5,131.8,134,136.5,139,142,145,148.8,152.5,156.9,161.2,163.7,166.2,167.6,169,170,171,171.5,172,172,172];
+        var arr_weight = [3.3,4.5,5.5,6.4,7,7.5,7.9,8.3,8.6,8.9,9.1,9.4,9.6,9.9,10,10.3,10.6,10.8,10.9,11.1,11.4,11.6,11.7,12,12.2,12.4,12.6,12.9,13,13.1,13.3,13.5,13.6,13.9,14,14.1,14.3,14.5,14.7,14.9,15,15.1,15.3,15.5,15.7,15.9,16,16.1,16.3,16.5,16.7,16.9,17,17.1,17.3,17.5,17.7,17.9,18,18.1,18.3,19.6,20.9,22.3,23.6,24.9,26.3,27.6,28.8,30,31.5,33,35.3,37.6,40.3,43,46.5,50,52.5,54.9,56.5,58,59,60,61,62,62.5,63];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_m85(){
+        var arr_height = [51.8,57,60,63.5,66,68,69.8,71.5,73,74,75.5,77,78.2,79.5,80.5,81.5,83,84,85.1,86,87,88,89,90,91,91.2,92,93,94,94.5,95.5,96,97,98,98.5,99,99.9,100.5,101,102,102.5,103.5,104,104.5,105,106,106.5,107,107.7,108.5,109,109.5,110,110.5,111.2,112,112.5,113,113.5,114,114.8,117.7,120.6,123.6,126.5,129.4,132.2,135,137.5,140,142.8,145.5,149.4,153.2,157.1,161,164.9,168.7,170.8,172.8,173.9,175,175.8,176.5,176.8,177,177.3,177.5];
+        var arr_weight = [3.9,5,6.3,7.1,7.9,8.4,8.9,9.2,9.6,10,10.3,10.5,10.8,11,11.2,11.6,11.9,12,12.3,12.5,12.8,13,13.1,13.4,13.7,13.9,14.1,14.4,14.5,14.8,15,15.2,15.4,15.6,15.9,16,16.3,16.4,16.6,16.9,17,17.2,17.5,17.7,17.9,18,18.2,18.5,18.7,18.9,19,19.2,19.5,19.7,19.9,20,20.2,20.5,21.1,22.9,24.7,26.4,28.2,30,32.2,34.3,35.7,37,39.4,41.8,44.7,47.5,50.4,53.2,56.8,60.4,62.7,65,66.5,68,69,70,70,70.5,71];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_m97(){
+        var arr_height = [53.4,58.5,62,65,68,70,71.6,73,75,76,77.5,79,80.2,81.5,83,84,85,86,87.3,88.5,89.5,90.5,91.5,92.5,93.6,94,95,95.5,96.5,97.5,98.3,99,100,101,101.5,102,103.1,104,104.5,105,106,106.5,107.3,108,108.5,109,110,110.5,111.2,112,112.5,113,114,114.5,115,115.5,116,117,117.5,118,118.7,121.8,124.9,128.1,131.2,134.3,137.2,140,142.5,145,148.3,151.5,156.1,160.7,164.4,168,171,174,176,178,179,180,180.5,181,181.5,182,182,182];
+        var arr_weight = [4.3,5.6,7,8,8.5,9.1,9.7,10.1,10.6,10.9,11.2,11.5,11.8,12,12.4,12.7,13,13.1,13.5,13.7,14,14.2,14.6,14.8,15.1,15.4,15.6,15.9,16.1,16.4,16.6,16.9,17,17.3,17.5,17.9,18,18.2,18.5,18.7,19,19.1,19.4,19.7,19.9,20.1,20.4,20.6,20.9,21,21.3,21.5,21.9,22,22.3,22.5,22.8,23,23.2,23.5,23.8,26.5,29.2,32,34.7,37.4,40.2,42.3,44.3,45.6,48.6,51.6,54.8,58,61.5,65,68.5,72,74.3,76.6,77.6,78.5,79.3,80,80,80,80];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_f03(){
+        var arr_height = [45.6,50,53,56,58,60,61.5,63,64.3,65.5,67,68,69.2,70,71.5,72.5,73,74.5,75.2,76,77,78,79,79.5,80.3,80.5,81,82,83,83.5,84,84.9,85.5,86,86.9,87.2,87.9,88.5,89,89.9,90.2,91,91.4,92,92.5,93,93.7,94,94.6,95,95.4,96,96.9,97,97.6,98,98.7,99,99.6,100,100.5,103,105.5,108.1,110.6,113.1,115.7,118.3,120.7,123,125.8,128.5,131.8,135,137.9,140.8,143.2,145.5,146.8,148,148.5,149,149.5,150,150,150,150,150];
+        var arr_weight = [2.4,3.1,4,4.6,5,5.5,5.8,6,6.3,6.5,6.7,7,7.1,7.3,7.5,7.6,7.8,8,8.2,8.3,8.5,8.6,8.8,9,9.2,9.3,9.4,9.6,9.8,9.9,10.1,10.2,10.4,10.5,10.6,10.8,11,11.1,11.2,11.3,11.5,11.6,11.8,11.9,12,12.1,12.2,12.4,12.5,12.6,12.8,12.9,13,13.1,13.2,13.4,13.5,13.6,13.7,13.8,14,14.9,15.9,16.8,17.8,18.7,19.6,20.4,21.5,22.5,23.8,25,26.5,28,29.8,31.5,33.5,35.5,37.1,38.6,39.3,40,40.5,41,41.5,42,42,42,42,42];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_f15(){
+        var arr_height = [47.2,52,55,57.5,60,62,63.4,65,66.3,68,69,70,71.3,72.5,73.5,75,76,77,77.7,78.5,79.8,80.5,81.5,82,83.1,83.2,84,85,85.4,86.2,87,87.9,88.5,89,90,90.5,91.1,91.8,92.2,93,93.8,94,94.8,95.5,96,96.7,97,97.8,98.3,99,99.5,100,100.5,101,101.5,102,102.5,103,103.5,104,104.5,107.1,109.7,112.3,114.9,117.5,120.3,123,125.5,128,131,134,137.5,141,143.8,146.5,148.5,150.5,151.3,152,152.5,153,153.5,154,154,154,154,154];
+        var arr_weight = [2.8,3.5,4.4,5,5.7,6,6.4,6.7,7,7.3,7.5,7.7,7.9,8,8.2,8.4,8.6,8.8,9,9.2,9.4,9.5,9.7,9.9,10.1,10.3,10.4,10.6,10.9,11,11.2,11.3,11.5,11.6,11.8,12,12.1,12.3,12.4,12.6,12.8,12.9,13.1,13.2,13.4,13.5,13.6,13.8,14,14.1,14.3,14.4,14.6,14.7,14.8,15,15.1,15.2,15.4,15.6,15.7,16.7,17.7,18.6,19.6,20.6,21.8,23,24,25,26.6,28.1,30.3,32.5,34.8,37,38.7,40.4,41.7,43,43.8,44.6,44.8,45,45.2,45.4,45.7,45.9];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_f50(){
+        var arr_height = [49.1,54,57,60,62,64,65.7,67,69,70,71.5,73,74,75,76.5,77.5,78.5,80,80.7,81.9,83,83.7,84.6,85.5,86.4,86.6,87.5,88,89,90,90.7,91.5,92,93,93.6,94.3,95.1,95.7,96.5,97,98,98.5,99,99.9,100.4,101,101.6,102,102.7,103.2,104,104.5,105,105.5,106.2,106.9,107.1,108,108.2,109,109.4,112.1,114.8,117.6,120.3,123,125.8,128.5,131.3,134,137.5,141,144.5,148,150.5,153,154.5,156,156.8,157.5,157.9,158.3,158.7,159,159.3,159.5,159.5,159.5,159.5];
+        var arr_weight = [3.2,4.1,5,5.9,6.4,6.9,7.3,7.6,8,8.2,8.5,8.7,8.9,9.1,9.4,9.6,9.8,10,10.2,10.4,10.6,10.8,11,11.2,11.5,11.7,11.9,12.1,12.3,12.5,12.7,12.9,13.1,13.3,13.5,13.6,13.9,14,14.2,14.4,14.6,14.8,15,15.2,15.3,15.5,15.7,15.9,16.1,16.2,16.4,16.6,16.8,17,17.2,17.4,17.5,17.7,17.9,18,18.2,19.4,20.5,21.7,22.8,24,25.4,26.8,28.2,29.6,31.8,34,36.9,39.7,41.7,43.7,45.4,47,48.1,49.1,49.6,50,50.5,51,51,51,51,51];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_f85(){
+        var arr_height = [51.1,56,59,62,64.5,66.5,68.1,69.5,71,72.5,74,75.5,76.7,78,79,80.5,81.5,82.5,83.7,85,86,87,88,89,89.8,90,91,92,93,93.5,94.3,95,96,96.7,97.5,98.1,99,100,100.5,101,102,102.6,103.3,104,104.8,105,106,106.6,107.2,108,108.5,109,109.8,110.1,110.9,111.5,112,112.7,113.1,114,114.4,117.1,119.9,122.6,125.4,128.1,131.3,134.5,137.8,141,144.8,148.5,151.8,155,157,159,160.3,161.5,162.3,163,163.5,164,164.2,164.4,164.7,165,165,165];
+        var arr_weight = [3.7,4.9,5.9,6.7,7.2,7.8,8.3,8.7,9,9.3,9.6,9.9,10.2,10.4,10.7,11,11.1,11.3,11.6,11.9,12.1,12.3,12.6,12.8,13.1,13.4,13.5,13.8,14,14.2,14.5,14.7,15,15.2,15.4,15.6,15.9,16.1,16.3,16.6,16.8,17,17.3,17.5,17.7,17.9,18.2,18.4,18.6,18.9,19,19.3,19.5,19.7,20,20.2,20.4,20.7,20.9,21.1,21.3,22.7,24.2,25.6,27.1,28.5,30.8,33,35,36.9,39.8,42.7,45.5,48.2,50.1,52,53.5,55,56,57,57.5,58,58,58,58,58,58];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function cur_get_percentile_arr_f97(){
+        var arr_height = [52.7,57,61,63.5,66,68,70,71.5,73,75,76,77.5,78.9,80,81.5,83,84,85,86.2,87.1,88.1,89.5,90.5,91.5,92.5,93,94,94.9,95.4,96.5,97.3,98,99,100,100.7,101.5,102.2,103,104,104.5,105,106,106.7,107.4,108,109,109.5,110,110.8,111.4,112,113,113.5,114,114.7,115.2,116,116.5,117,118,118.4,121.3,124.2,127.2,130.1,133,136.5,140,143.5,147,150.8,154.5,157.3,160,161.8,163.5,164.8,166,167,167.9,168.2,168.5,168.8,169,169,169,169,169];
+        var arr_weight = [4.2,5.4,6.5,7.4,8,8.6,9.2,9.6,10,10.3,10.8,11,11.3,11.7,11.9,12.2,12.4,12.7,13,13.2,13.6,13.8,14,14.3,14.6,14.8,15.1,15.4,15.6,16,16.2,16.4,16.7,17,17.2,17.6,17.8,18.1,18.3,18.6,18.9,19.2,19.5,19.7,20,20.3,20.5,20.8,21.1,21.4,21.6,22,22.2,22.4,22.8,23,23.5,23.6,23.9,24.2,24.4,26.5,28.6,30.8,32.9,35,37.8,40.5,42.8,45,47.3,49.6,52.7,55.8,57.8,59.7,61.2,62.7,63.9,65,65.5,66,66.2,66.4,66.7,67,67,67];
+        var arr = new Array;
+        arr.push(arr_height);
+        arr.push(arr_weight);
+        return arr;
+    }
+
+    function hideResult() {
+        document.getElementById('result-box').style.display = 'none';
+        // 清空原廠隱藏結果區
+        document.getElementById('result_m').innerHTML = '';
+        document.getElementById('result_ph_m').innerHTML = '';
+        document.getElementById('result_f').innerHTML = '';
+        document.getElementById('result_ph_f').innerHTML = '';
+    }
+
+    document.getElementById('growth-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // 檢查原廠 JS 是否成功載入
+        if (typeof cp_calculate_above_or_below_line !== 'function') {
+            alert("錯誤：無法載入原廠計算程式 (JS 檔案遺失或路徑錯誤)。請確認 js 資料夾內有正確的檔案。");
+            return;
+        }
+
+        // 1. 取得新介面的值
+        const gender = document.querySelector('input[name="gender"]:checked').value;
+        const suffix = gender === 'male' ? '_m' : '_f';
+        
+        const height = parseFloat(document.getElementById('height').value);
+        const weight = parseFloat(document.getElementById('weight').value);
+        const fatherHeight = parseFloat(document.getElementById('father-height').value) || 0;
+        const motherHeight = parseFloat(document.getElementById('mother-height').value) || 0;
+        
+        // 處理日期：西元轉民國
+        const birthdayVal = document.getElementById('birthday').value;
+        const dateObj = new Date(birthdayVal);
+        const rocYear = dateObj.getFullYear() - 1911;
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+
+        // 2. 將值橋接到隱藏的原廠輸入框
+        document.getElementById('inp_year' + suffix).value = rocYear;
+        document.getElementById('inp_month' + suffix).value = month;
+        document.getElementById('inp_day' + suffix).value = day;
+        document.getElementById('inp_height' + suffix).value = height;
+        document.getElementById('inp_weight' + suffix).value = weight;
+        
+        document.getElementById('inp_bbw' + suffix).value = document.getElementById('birth-weight').value || '';
+        document.getElementById('inp_ga' + suffix).value = document.getElementById('gestational-age').value || '';
+        
+        const isTwin = document.querySelector('input[name="twins"]:checked').value === 'twin';
+        document.getElementById('radio_twins' + suffix).checked = isTwin;
+        document.getElementById('radio_singleton' + suffix).checked = !isTwin;
+
+        document.getElementById('inp_height_father' + suffix).value = fatherHeight > 0 ? fatherHeight : '';
+        document.getElementById('inp_height_mother' + suffix).value = motherHeight > 0 ? motherHeight : '';
+
+        // 骨齡橋接
+        document.getElementById('inp_boneAge_year_ph' + suffix).value = document.getElementById('bone-age-years').value || '';
+        document.getElementById('inp_boneAge_month_ph' + suffix).value = document.getElementById('bone-age-months').value || '';
+        document.getElementById('inp_height_ph' + suffix).value = document.getElementById('exam-height').value || '';
+
+        // 清空之前的舊結果
+        document.getElementById('result' + suffix).innerHTML = '';
+        document.getElementById('result_ph' + suffix).innerHTML = '';
+
+        // 3. 呼叫原廠 JS 進行計算
+        try {
+            cp_calculate_above_or_below_line(gender);
+            
+            // 如果有填寫骨齡或骨齡身高，則觸發骨齡計算
+            if(document.getElementById('bone-age-years').value !== '' || document.getElementById('exam-height').value !== '') {
+                bone_calculate_predict_height(gender);
+            }
+        } catch (error) {
+            console.error("執行計算時發生錯誤:", error);
+        }
+
+        // 4. 構建自訂摘要 (BMI 與 遺傳身高)
+        let customHTML = `<h3 style="margin-top:0; color:#1e40af;">📌 綜合評估摘要</h3>`;
+        
+        // BMI 計算
+        const heightInMeters = height / 100;
+        const bmi = weight / (heightInMeters * heightInMeters);
+        customHTML += `<p><strong>目前 BMI：</strong> ${bmi.toFixed(1)}</p>`;
+
+        // 遺傳目標身高預測 (Target Height) 公式
+        if (fatherHeight > 0 && motherHeight > 0) {
+            let targetHeight = 0;
+            if (gender === 'male') {
+                targetHeight = (fatherHeight + motherHeight + 13) / 2;
+            } else {
+                targetHeight = (fatherHeight + motherHeight - 13) / 2;
+            }
+            customHTML += `<p><strong>遺傳目標身高預測：</strong> 約 ${targetHeight.toFixed(1)} 公分 (±7.5公分)</p>`;
+        }
+
+        // 5. 抓取原廠結果並組合
+        const officialResult = document.getElementById('result' + suffix).innerHTML;
+        const officialBoneResult = document.getElementById('result_ph' + suffix).innerHTML;
+
+        let finalHTML = customHTML;
+
+        // 插入生長百分位結果
+        if (officialResult && officialResult.trim() !== '') {
+            finalHTML += `<div class="official-result">`;
+            finalHTML += `<h4 style="margin-top:0; color:#047857; border-bottom:1px solid #d1fae5; padding-bottom:5px;">📈 生長百分位結果</h4>`;
+            finalHTML += officialResult;
+            finalHTML += `</div>`;
+        }
+
+        // 插入骨齡預測結果
+        if (officialBoneResult && officialBoneResult.trim() !== '') {
+            finalHTML += `<div class="official-result">`;
+            finalHTML += `<h4 style="margin-top:0; color:#6d28d9; border-bottom:1px solid #ede9fe; padding-bottom:5px;">🦴 骨齡預測成年身高</h4>`;
+            finalHTML += officialBoneResult;
+            finalHTML += `</div>`;
+        }
+
+        // 顯示結果
+        const resultBox = document.getElementById('result-box');
+        resultBox.innerHTML = finalHTML;
+        resultBox.style.display = 'block';
+        
+        // 平滑滾動到結果
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+</script>
+
+</body>
+</html>
