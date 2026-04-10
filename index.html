@@ -836,23 +836,6 @@
         return rtn;
     }
 
-    function cp_calculate_parent_height(strGender){
-        var strMandarin=strEnglish="";	 
-        var heightFather=document.getElementById("inp_height_father"+strGender).value; 
-        var heightMother=document.getElementById("inp_height_mother"+strGender).value; 
-        if(gd_numOk(heightFather)&&gd_numOk(heightMother)){
-            heightFather=parseFloat(Nz(heightFather)); 
-            heightMother=parseFloat(Nz(heightMother)); 
-            var heightGenetic = (heightFather + heightMother)/2;
-            heightGenetic = Math.round(heightGenetic * 100) / 100;						
-            heightGenetic+=((strGender=='_m')?6:(-6));		
-            strMandarin="父高:"+heightFather+"cm,母高:"+heightMother+"cm,遺傳身高:"+heightGenetic+"cm<br>";	
-            strEnglish="Father BL:"+heightFather+"cm,Mother BL:"+heightMother+"cm,Target BL:"+heightGenetic+"cm";	
-        }
-        var rtn=[strMandarin,strEnglish];
-        return rtn;
-    }
-
     function cp_calculate_above_or_below_line_determineAge(age, str_gender){
         var height=parseFloat(document.getElementById("inp_height"+str_gender).value); 
         var weight=parseFloat(document.getElementById("inp_weight"+str_gender).value);
@@ -890,17 +873,14 @@
                 }
             }			
             var bbw=cp_calculate_bbw(str, twin);			
-            var percentile=cp_calculate_above_or_below_line_determineAge(ageDecimal,str); 
-            var geneticBL=cp_calculate_parent_height(str);				
+            var percentile=cp_calculate_above_or_below_line_determineAge(ageDecimal,str);
             var strHead=strGenderToHTML+","+ageMandarin+"<br>";
             var strMandarin=percentile[0]+"<br>";
             strMandarin+=bbw[0]+"<br>";
-            strMandarin+=geneticBL[0];
             var strSeparate="<br>"+"================================="+"<br><br>";
             var strEnglish=percentile[1]+
                            (bbw[1]==""?"":","+bbw[1])+
                            (bbw[2]==""?"":"<br>"+bbw[2])+
-                           (geneticBL[1]==""?"":"<br>"+geneticBL[1])+
                            "<br>"+strGender+" ref:" + percentile[2];
             strInnerHTML=strHead+strMandarin+strSeparate+strEnglish; 		
         }
