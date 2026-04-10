@@ -156,6 +156,61 @@
             border: 1px solid #bfdbfe;
             border-radius: 8px;
             display: none;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            font-size: 0.98rem;
+            line-height: 1.6;
+        }
+
+        .input-inline {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-inline input {
+            flex: 1 1 120px;
+            min-width: 80px;
+        }
+
+        .result-summary {
+            margin-top: 0;
+            padding: 18px;
+            background-color: #f8fafc;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+        }
+
+        .result-summary h3,
+        .official-result h4 {
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .result-summary p,
+        .official-result p,
+        .official-result span,
+        .result-summary span {
+            margin: 0.55rem 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+
+        .official-result {
+            margin-top: 20px;
+            padding: 18px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .error-message {
+            color: #b91c1c;
+            font-weight: 700;
+            margin: 0;
+            font-size: 1rem;
         }
 
         .disclaimer {
@@ -164,19 +219,6 @@
             margin-top: 30px;
             padding-top: 15px;
             border-top: 1px solid var(--border-color);
-        }
-
-        /* 針對原廠 JS 產出的結果進行美化 */
-        .official-result {
-            margin-top: 20px; 
-            padding: 15px; 
-            background: #fff; 
-            border-radius: 8px; 
-            border: 1px solid #e5e7eb;
-        }
-        .official-result span {
-            display: block;
-            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -245,7 +287,7 @@
         <div class="grid-layout">
             <div class="form-group">
                 <label>骨齡檢查結果 (歲 / 月)</label>
-                <div style="display: flex; gap: 10px;">
+                <div class="input-inline">
                     <input type="number" id="bone-age-years" placeholder="歲" min="0" max="18">
                     <input type="number" id="bone-age-months" placeholder="月" min="0" max="11">
                 </div>
@@ -878,11 +920,15 @@
             var strMandarin=percentile[0]+"<br>";
             strMandarin+=bbw[0]+"<br>";
             var strSeparate="<br>"+"================================="+"<br><br>";
-            var strEnglish=percentile[1]+
-                           (bbw[1]==""?"":","+bbw[1])+
-                           (bbw[2]==""?"":"<br>"+bbw[2])+
-                           "<br>"+strGender+" ref:" + percentile[2];
-            strInnerHTML=strHead+strMandarin+strSeparate+strEnglish; 		
+            var strEnglish = percentile[1].replace(",", "<br>") + "<br>";
+            if (bbw[1] !== "") {
+                strEnglish += bbw[1] + "<br>";
+            }
+            if (bbw[2] !== "") {
+                strEnglish += bbw[2] + "<br>";
+            }
+            strEnglish += strGender + " ref: " + percentile[2];
+            strInnerHTML=strHead+strMandarin+strSeparate+strEnglish;
         }
         document.getElementById("result" + str).innerHTML = strInnerHTML;
     }
@@ -1234,7 +1280,7 @@
         }
 
         // 4. 構建自訂摘要 (BMI 與 遺傳身高)
-        let customHTML = `<h3 style="margin-top:0; color:#1e40af;">📌 綜合評估摘要</h3>`;
+        let customHTML = `<div class="result-summary"><h3 style="margin-top:0; color:#1e40af;">📌 綜合評估摘要</h3>`;
         
         // BMI 計算
         const heightInMeters = height / 100;
@@ -1256,6 +1302,7 @@
         const officialResult = document.getElementById('result' + suffix).innerHTML;
         const officialBoneResult = document.getElementById('result_ph' + suffix).innerHTML;
 
+        customHTML += `</div>`;
         let finalHTML = customHTML;
 
         // 插入生長百分位結果
